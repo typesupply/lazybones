@@ -16,6 +16,7 @@ Are coming soon-ish.
 
 #### Pre-Built Variables
 
-|:--|:--|
-| `overshootLowercase` | Calculated as the bottom of the bounds of the "o"  |
-| `overshootUppercase` | Calculated as the bottom of the bounds of the "O" |
+Name                 | Description
+-------------------- | --------------------------------------------------
+`overshootLowercase` | Calculated as the bottom of the bounds of the "o".
+`overshootUppercase` | Calculated as the bottom of the bounds of the "O".
