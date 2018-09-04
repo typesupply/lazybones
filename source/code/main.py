@@ -130,6 +130,8 @@ def loadConstructions(layer):
     # text += getExtensionDefault(defaultsKey)
     constructions = {}
     for construction in ParseGlyphConstructionListFromString(text):
+        if not construction:
+            continue
         name, construction = parseGlyphName(construction)
         if name is None:
             continue
