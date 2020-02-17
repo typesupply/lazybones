@@ -2,10 +2,11 @@
 
 from AppKit import *
 import os
+import shutil
 from mojo.extensions import ExtensionBundle
 
 name = "Lazy Bones"
-version = "0.1"
+version = "0.2"
 developer = "Type Supply"
 developerURL = "http://typesupply.com"
 roboFontVersion = "3.2"
@@ -17,12 +18,18 @@ menuItems = [
         shortKey=(NSCommandKeyMask | NSShiftKeyMask | NSControlKeyMask, "v")
     ),
     dict(
+        path="menu_showForCurrentFont.py",
+        preferredName="Add To Current Font",
+        shortKey=""
+    ),
+    dict(
         path="menu_showDefaults.py",
         preferredName="Edit Constructions",
         shortKey=""
     )
 ]
 
+installAfterBuild = True
 
 basePath = os.path.dirname(__file__)
 sourcePath = os.path.join(basePath, "source")
@@ -57,3 +64,13 @@ v = B.save(extensionPath, libPath=libPath, pycOnly=pycOnly)
 print("done!")
 print()
 print(B.validationErrors())
+
+if installAfterBuild:
+    print("Installing extension...", end=" ")
+    installDirectory = os.path.expanduser("~/Library/Application Support/RoboFont/plugins")
+    installPath = os.path.join(installDirectory, extensionFile)
+    if os.path.exists(installPath):
+        shutil.rmtree(installPath)
+    shutil.copytree(extensionPath, installPath)
+    print("done!")
+    print("RoboFont must now be restarted.")

@@ -6,9 +6,13 @@ This extension lets you define constructions for starting glyphs. For example, i
 
 ## Documentation
 
-![The Boring Interface](interface.png)
+### Add To Current Glyph
 
 In the text field there will be a glyph construction. Use the amazing [Glyph Construction](https://github.com/typemytype/GlyphConstruction) syntax, but don't enter the `=` part of the syntax here. Check the _Decompose_ check box if you want the components decomposed.
+
+### Add To Current Font
+
+This is the same as "Add To Current Glyph" but, you know, for the whole font. It should be self-explanatory.
 
 ### Your Own Settings
 

@@ -17,6 +17,14 @@
 		</dict>
 		<dict>
 			<key>path</key>
+			<string>menu_showForCurrentFont.py</string>
+			<key>preferredName</key>
+			<string>Add To Current Font</string>
+			<key>shortKey</key>
+			<string></string>
+		</dict>
+		<dict>
+			<key>path</key>
 			<string>menu_showDefaults.py</string>
 			<key>preferredName</key>
 			<string>Edit Constructions</string>
@@ -41,8 +49,8 @@
 	<key>requiresVersionMinor</key>
 	<string>2</string>
 	<key>timeStamp</key>
-	<real>1536078567.1486568</real>
+	<real>1581972781.869396</real>
 	<key>version</key>
-	<string>0.1</string>
+	<string>0.2</string>
 </dict>
 </plist>
