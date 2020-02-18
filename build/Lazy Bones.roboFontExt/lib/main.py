@@ -502,6 +502,7 @@ Lslash = L + hyphen ^ L
 *Eng = N + J ^ N
 *OE = D & E ^ D', E
 Tbar = T + hyphen @ center, none ^ T
+Dcroat = Eth ^ Eth
 
 # ---------
 # Lowercase
@@ -700,6 +701,15 @@ greaterequal = lessequal @ ~none, none ^ lessequal', lessequal'
 *cedilla = acute ^ acute
 *hungarumlaut = cedilla ^ cedilla
 *commaaccent = comma ^ comma
+commaaccent.flipped = commaaccent @ ~none, ~none ^ commaaccent
+acute.ascender = acute ^ acute
+commaaccent.ascender = commaaccent ^ commaaccent
+
+# ------
+# Spaces
+# ------
+
+*uni2009 = space ^ space * 0.45
 """.strip()
 
 # don't register defaults until more constructions are in place
