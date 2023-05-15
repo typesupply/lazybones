@@ -1,133 +1,237 @@
-from copy import deepcopy
+import weakref
 import vanilla
+import ezui
+from copy import deepcopy
 from mojo.UI import CurrentFontWindow, CurrentGlyphWindow, StatusInteractivePopUpWindow
 from mojo.roboFont import AllFonts, CurrentFont, CurrentGlyph
 from glyphConstruction import GlyphConstructionBuilder, ParseGlyphConstructionListFromString, parseGlyphName
 from mojo.extensions import registerExtensionDefaults, setExtensionDefault, getExtensionDefault
 
-# -------------------
-# Interface: Defaults
-# -------------------
+___all__ = """
+showConstructionForCurrentGlyph
+showConstructionsForCurrentFont
+showConstructionDefaults
+guessConstructionForGlyphName
+guessConstructionsForGlyphNames
+""".strip().splitlines()
 
-# defaults
 
-def showConstructionDefaults():
-    vanilla.dialogs.message("LOL! This doesn't work yet.")
+# -----
+# Glyph
+# -----
 
-# ----------------------------
-# Interface: Build Many Window
-# ----------------------------
+def showConstructionForCurrentGlyph():
+    """
+    Show the construction editor for the current glyph.
+    """
+    glyph = CurrentGlyph()
+    if glyph is None:
+        return
+    data = guessConstructionForGlyphName(glyph.name, glyph.layer)
+    if data is not None:
+        construction = data["construction"]
+        decompose = data["decompose"]
+        clear = data["clear"]
+        LazyBonesGlyphEditorController(
+            glyph,
+            construction=construction,
+            decompose=decompose,
+            clear=clear
+        )
+    else:
+        vanilla.dialogs.message(
+            "No construction available for %s." % glyph.name,
+            "Define one in the preferences so that you can be lazy in the future."
+        )
+
+class LazyBonesGlyphEditorController(ezui.WindowController):
+
+    def build(self,
+            glyph=None,
+            construction=None,
+            decompose=True,
+            clear=True
+        ):
+        self.glyph = glyph
+        content = """
+        [__] @constructionField
+
+        [ ] Clear Outline @clearCheckbox
+        [ ] Decompose Components @decomposeCheckbox
+
+        =---=
+
+        (Cancel) @cancelButton
+        (Build) @buildButton
+        """
+        buttonWidth = 80
+        descriptionData = dict(
+            constructionField=dict(
+                value=construction
+            ),
+            clearCheckbox=dict(
+                value=clear
+            ),
+            decomposeCheckbox=dict(
+                value=decompose
+            ),
+            cancelButton=dict(
+                width=buttonWidth,
+                keyEquivalent=".",
+                keyEquivalentModifiers=["command"]
+            ),
+            buildButton=dict(
+                width=buttonWidth
+            )
+        )
+        self.w = ezui.EZPopUp(
+            content=content,
+            descriptionData=descriptionData,
+            controller=self,
+            parent=CurrentGlyphWindow().getGlyphView(),
+            size=(350, "auto"),
+            defaultButton="buildButton"
+        )
+
+    def started(self):
+        self.w.open()
+
+    def cancelButtonCallback(self, sender):
+        self.w.close()
+
+    def buildButtonCallback(self, sender):
+        construction = self.w.getItemValue("constructionField")
+        clear = self.w.getItemValue("clearCheckbox")
+        decompose = self.w.getItemValue("decomposeCheckbox")
+        buildGlyphFromConstruction(
+            self.glyph,
+            construction=construction,
+            clear=clear,
+            decompose=decompose
+        )
+        self.w.close()
+
+
+# ----
+# Font
+# ----
 
 def showConstructionsForCurrentFont():
+    """
+    Show the construction editor for the current font.
+    """
     font = CurrentFont()
     if font is None:
         return
-    LazyBonesConstructionCurrentFontSheet(font)
+    LazyBonesFontSheet(font)
 
-class LazyBonesConstructionCurrentFontSheet(object):
+constructionTableCaptionTemplate = "glyphs selected for construction."
 
-    def __init__(self, font):
+class LazyBonesFontSheet(ezui.WindowController):
+
+    def build(self,
+            font=None
+        ):
         self.font = font
-        self.w = vanilla.Sheet((700, 300), parentWindow=CurrentFontWindow().w, minSize=(200, 200))
         self.originalConstructions = ConstructionsLoader(font.defaultLayer).constructions
-        columnDescriptions = [
-            dict(
-                title="Name",
-                key="name",
-                editable=False,
-                width=100
+        content = f"""
+        |---| @constructionTable
+        !- 0 {constructionTableCaptionTemplate} @constructionTableCaption
+        =---=
+        [ ] Show Existing Glyphs @showExistingGlyphsCheckbox
+        (Build In Current Font) @buildButton
+        (Build In All Fonts) @buildInAllFontsButton
+        (Cancel) @cancelButton
+        """
+        buttonWidth = 150
+        descriptionData = dict(
+            constructionTable=dict(
+                columnDescriptions = [
+                    dict(
+                        title="Name",
+                        identifier="name",
+                        editable=False,
+                        width=100
+                    ),
+                    dict(
+                        title="Construction",
+                        identifier="construction",
+                        editable=True
+                    ),
+                    dict(
+                        title="Decompose",
+                        identifier="decompose",
+                        editable=True,
+                        cellDescription=dict(
+                            cellType="Checkbox"
+                        ),
+                        width=80
+                    ),
+                    dict(
+                        title="Clear",
+                        identifier="clear",
+                        editable=True,
+                        cellDescription=dict(
+                            cellType="Checkbox"
+                        ),
+                        width=80
+                    )
+                ]
             ),
-            dict(
-                title="Construction",
-                key="construction",
-                editable=True
+            constructionTableCaption=dict(
+                alignment="center",
+                width="fill"
             ),
-            dict(
-                title="Decompose",
-                key="decompose",
-                editable=True,
-                cell=vanilla.CheckBoxListCell(),
-                width=80
+            showExistingGlyphsCheckbox=dict(
+                gravity="leading"
+            ),
+            cancelButton=dict(
+                keyEquivalent=".",
+                keyEquivalentModifiers=["command"]
+            ),
+            buildButton=dict(
+                width=buttonWidth
+            ),
+            buildInAllFontsButton=dict(
+                width=buttonWidth
             )
-        ]
-        self.w.constructionList = vanilla.List(
-            "auto",
-            [],
-            columnDescriptions=columnDescriptions
         )
-        self.w.showExistingGlyphsCheckBox = vanilla.CheckBox(
-            "auto",
-            "Show Existing Glyphs",
-            callback=self.showExistingGlyphsCheckBoxCallback
+        self.w = ezui.EZSheet(
+            content=content,
+            descriptionData=descriptionData,
+            controller=self,
+            parent=CurrentFontWindow().w,
+            size=(700, 300),
+            defaultButton="buildButton"
         )
-        self.w.flex = vanilla.Group("auto")
-        self.w.buildInAllFontsButton = vanilla.Button(
-            "auto",
-            "Build In All Fonts",
-            callback=self.buildInAllFontsButtonCallback
-        )
-        self.w.cancelButton = vanilla.Button(
-            "auto",
-            "Cancel",
-            callback=self.cancelButtonCallback
-        )
-        self.w.buildButton = vanilla.Button(
-            "auto",
-            "Build",
-            callback=self.buildButtonCallback
-        )
+        self.populateconstructionTable()
 
-        metrics = dict(
-            margin=15,
-            padding=10,
-            buttonWidth=80
-        )
-        rules = [
-            "H:|[constructionList]|",
-            "H:|-margin-[showExistingGlyphsCheckBox][flex(>=100)]-[buildInAllFontsButton]-padding-[cancelButton(==buttonWidth)]-padding-[buildButton(==buttonWidth)]-margin-|",
-            "V:|"
-                "[constructionList]"
-                "-padding-"
-                "[showExistingGlyphsCheckBox]"
-                "-margin-"
-            "|",
-            "V:|"
-                "[constructionList]"
-                "-padding-"
-                "[flex]"
-                "-margin-"
-            "|",
-            "V:|"
-                "[constructionList]"
-                "-padding-"
-                "[buildInAllFontsButton]"
-                "-margin-"
-            "|",
-            "V:|"
-                "[constructionList]"
-                "-padding-"
-                "[cancelButton]"
-                "-margin-"
-            "|",
-            "V:|"
-                "[constructionList]"
-                "-padding-"
-                "[buildButton]"
-                "-margin-"
-            "|"
-        ]
-        self.w.addAutoPosSizeRules(rules, metrics)
-
-        self.populateConstructionList()
-        self.w.setDefaultButton(self.w.buildButton)
-        self.w.cancelButton.bind(".", ["command"])
+    def started(self):
         self.w.open()
 
-    # Populate List
+    def showExistingGlyphsCheckboxCallback(self, sender):
+        self.populateconstructionTable()
 
-    def populateConstructionList(self):
+    def cancelButtonCallback(self, sender):
+        self.w.close()
+
+    def buildButtonCallback(self, sender):
+        fonts = [self.font]
+        try:
+            self._build(fonts)
+        finally:
+            self.w.close()
+
+    def buildInAllFontsButtonCallback(self, sender):
+        fonts = AllFonts()
+        try:
+            self._build(fonts)
+        finally:
+            self.w.close()
+
+    def populateconstructionTable(self):
         skip = []
-        if not self.w.showExistingGlyphsCheckBox.get():
+        if not self.w.getItemValue("showExistingGlyphsCheckbox"):
             for glyph in self.font.defaultLayer:
                 if len(glyph) or len(glyph.components):
                     skip.append(glyph.name)
@@ -136,204 +240,104 @@ class LazyBonesConstructionCurrentFontSheet(object):
             for key, value in sorted(self.originalConstructions.items())
             if key not in skip
         ]
-        self.w.constructionList.set(constructions)
+        self.w.setItemValue("constructionTable", constructions)
 
-    def showExistingGlyphsCheckBoxCallback(self, sender):
-        self.populateConstructionList()
-
-    # Cancel
-
-    def cancelButtonCallback(self, sender):
-        self.w.close()
-
-    # Build
-
-    def buildInAllFontsButtonCallback(self, sender):
-        fonts = AllFonts()
-        self._build(fonts)
-        self.w.close()
-
-    def buildButtonCallback(self, sender):
-        fonts = [self.font]
-        self._build(fonts)
-        self.w.close()
+    def constructionTableSelectionCallback(self, sender):
+        count = len(sender.getSelectedIndexes())
+        t = constructionTableCaptionTemplate
+        if count == 1:
+            t = t.replace("glyphs", "glyph")
+        self.w.setItemValue(
+            "constructionTableCaption",
+            str(count) + " " + t
+        )
 
     def _build(self, fonts):
-        constructionList = self.w.constructionList
-        selectedConstructions = {
-            constructionList[i]["name"] : constructionList[i]
-            for i in constructionList.getSelection()
-        }
+        constructionTable = self.w.getItem("constructionTable")
+        selectedConstructions = constructionTable.getSelectedItems()
         if selectedConstructions:
+            selectedConstructions = {
+                item["name"] : item
+                for item in selectedConstructions
+            }
             modifiedConstructions = {}
             for name, item in selectedConstructions.items():
                 og = self.originalConstructions[name]
                 if item != og:
                     modifiedConstructions[name] = item
-            for font in fonts:
-                constructions = {}
-                loader = ConstructionsLoader(font.defaultLayer)
-                for name, data in loader.constructions.items():
-                    if name in selectedConstructions:
+            progressBar = self.startProgress(
+                text="Building...",
+                maxValue=len(selectedConstructions) * len(fonts),
+                parent=self.w
+            )
+            try:
+                for font in fonts:
+                    constructions = {}
+                    loader = ConstructionsLoader(font.defaultLayer)
+                    for name, data in loader.constructions.items():
+                        if name in selectedConstructions:
+                            constructions[name] = data
+                    for name, data in modifiedConstructions.items():
                         constructions[name] = data
-                for name, data in modifiedConstructions.items():
-                    constructions[name] = data
-                for name, data in constructions.items():
-                    glyph = font.defaultLayer.newGlyph(name, clear=True)
-                    buildGlyphFromConstruction(
-                        glyph,
-                        construction=data["construction"],
-                        decompose=data["decompose"]
-                    )
+                    for name, data in constructions.items():
+                        progressBar.setText(f"Building {name}...")
+                        glyph = font.defaultLayer.newGlyph(name, clear=False)
+                        buildGlyphFromConstruction(
+                            glyph,
+                            construction=data["construction"],
+                            decompose=data["decompose"],
+                            clear=data["clear"]
+                        )
+                        progressBar.increment()
+            finally:
+                progressBar.close()
 
+# --------
+# Defaults
+# --------
 
-# --------------------------------------
-# Interface: Current Glyph Pop Up Window
-# --------------------------------------
-
-def showConstructionForCurrentGlyph():
-    glyph = CurrentGlyph()
-    if glyph is None:
-        return
-    constructions = ConstructionsLoader(glyph.layer)
-    data = constructions.guessConstructionForGlyphName(glyph.name)
-    if data is not None:
-        construction = data["construction"]
-        decompose = data["decompose"]
-        LazyBonesConstructionCurrentGlyphPopUpWindow(glyph, construction, decompose)
-    else:
-        vanilla.dialogs.message(
-            "No construction available for %s." % glyph.name,
-            "Define one in the preferences so that you can be lazy in the future."
-        )
-
-class LazyBonesConstructionCurrentGlyphPopUpWindow(object):
-
-    def __init__(self, glyph, construction, decompose):
-        self.glyph = glyph
-
-        width = 350
-        height = 120
-        editorWindow = CurrentGlyphWindow()
-        (editorX, editorY, editorW, editorH), screen = getGlyphEditorRectAndScreen(editorWindow)
-        x = editorX + ((editorW - width) / 2)
-        y = editorY + ((editorH - height) / 2)
-        self.w = StatusInteractivePopUpWindow((x, y, width, height), screen=screen)
-
-        self.w.constructionEditor = vanilla.EditText(
-            "auto",
-            construction
-        )
-        self.w.decomposeCheckBox = vanilla.CheckBox(
-            "auto",
-            "Decompose",
-            value=decompose
-        )
-
-        self.w.open()
-
-        self.w.line = vanilla.HorizontalLine("auto")
-        self.w.flex = vanilla.Group("auto")
-        self.w.cancelButton = vanilla.Button(
-            "auto",
-            "Cancel",
-            callback=self.cancelButtonCallback
-        )
-        self.w.buildButton = vanilla.Button(
-            "auto",
-            "Build",
-            callback=self.buildButtonCallback
-        )
-
-        metrics = dict(
-            margin=15,
-            padding=10,
-            buttonWidth=80
-        )
-        rules = [
-            "H:|-margin-[constructionEditor]-margin-|",
-            "H:|-margin-[line]-margin-|",
-            "H:|-margin-[decomposeCheckBox][flex(>=100)]-[cancelButton(==buttonWidth)]-padding-[buildButton(==buttonWidth)]-margin-|",
-
-            "V:|"
-                "-margin-"
-                "[constructionEditor]"
-                "-padding-"
-                "[line]"
-                "-padding-"
-                "[decomposeCheckBox]"
-                "-margin-"
-            "|",
-            "V:|"
-                "-margin-"
-                "[constructionEditor]"
-                "-padding-"
-                "[line]"
-                "-padding-"
-                "[flex]"
-                "-margin-"
-            "|",
-            "V:|"
-                "-margin-"
-                "[constructionEditor]"
-                "-padding-"
-                "[line]"
-                "-padding-"
-                "[cancelButton]"
-                "-margin-"
-            "|",
-            "V:|"
-                "-margin-"
-                "[constructionEditor]"
-                "-padding-"
-                "[line]"
-                "-padding-"
-                "[buildButton]"
-                "-margin-"
-            "|"
-        ]
-        self.w.addAutoPosSizeRules(rules, metrics)
-
-        self.w.setDefaultButton(self.w.buildButton)
-        self.w.cancelButton.bind(".", ["command"])
-        self.w.getNSWindow().makeFirstResponder_(self.w.constructionEditor.getNSTextField())
-
-        self.w.open()
-
-    # ---------
-    # Callbacks
-    # ---------
-
-    def buildButtonCallback(self, sender):
-        buildGlyphFromConstruction(
-            self.glyph,
-            self.w.constructionEditor.get(),
-            self.w.decomposeCheckBox.get()
-        )
-        self.w.close()
-
-    def cancelButtonCallback(self, sender):
-        self.w.close()
-
-
-def getGlyphEditorRectAndScreen(editorWindow):
-    screen = editorWindow.w.getNSWindow().screen()
-    nsWindow = editorWindow.w.getNSWindow()
-    scrollView = editorWindow.getGlyphView().enclosingScrollView()
-    rectInWindowCoords = scrollView.convertRect_toView_(scrollView.frame(), None)
-    rectInScreenCoords = nsWindow.convertRectToScreen_(rectInWindowCoords)
-    (screenX, screenY), (screenWidth, screenHeight) = screen.frame()
-    (x, y), (w, h) = rectInScreenCoords
-    y = -(y + h)
-    return (x, y, w, h), screen
+def showConstructionDefaults():
+    vanilla.dialogs.message("LOL! This doesn't work yet.")
 
 # -------------
 # Constructions
 # -------------
 
-class ConstructionsLoader(object):
+def guessConstructionForGlyphName(glyphName, layer):
+    """
+    Guess the construction for the given glyph name
+    using the layer for variable calculations.
+    """
+    construction = guessConstructionsForGlyphNames([glyphName], layer)[glyphName]
+    return construction
+
+def guessConstructionsForGlyphNames(glyphNames, layer):
+    """
+    Guess the constructions for the given glyph names
+    using the layer for variable calculations. This will
+    return a dictionary of form:
+
+    ```
+    {
+        "name" : "glyph name",
+        "construction" : "construction string",
+        "decompose" : boolean,
+        "clear" : boolean
+    }
+    ```
+    """
+    loader = ConstructionsLoader(layer)
+    constructions = {
+        glyphName : loader.guessConstructionForGlyphName(glyphName)
+        for glyphName in glyphNames
+    }
+    return constructions
+
+
+class ConstructionsLoader:
 
     def __init__(self, layer):
+
         self.layer = layer
         self.constructions = loadConstructions(layer)
 
@@ -347,8 +351,15 @@ class ConstructionsLoader(object):
                 data = self.constructions[base]
         return data
 
-def buildGlyphFromConstruction(glyph, construction, decompose):
+def buildGlyphFromConstruction(
+        glyph,
+        construction,
+        clear=True,
+        decompose=False
+    ):
     glyph.prepareUndo("Lazy Bones")
+    if clear:
+        glyph.clear()
     layer = glyph.layer
     postContructionFunction = None
     if "# >>>" in construction:
@@ -392,7 +403,8 @@ def loadConstructions(layer):
         constructions[name] = dict(
             name=name,
             construction=construction,
-            decompose=decompose
+            decompose=decompose,
+            clear=True
         )
     return constructions
 
@@ -578,7 +590,7 @@ tbar = t + hyphen @ center, none ^ t
 *exclam = period ^ period
 *question = period + two ^ two
 exclamdown = exclam @ ~none, ~none ^ exclam', exclam'
-questiondown = question @ ~none, ~none ^ question', question' 
+questiondown = question @ ~none, ~none ^ question', question'
 ellipsis = period & period & period ^ period, period
 *periodcentered = colon ^ colon # >>> deleteBottomContour
 
@@ -628,7 +640,7 @@ backslash = slash @ ~none, none ^ slash', slash'
 # ------
 
 *quotesingle = exclam ^ exclam
-quotedbl = quotesingle & quotesingle ^ quotesingle, quotesingle 
+quotedbl = quotesingle & quotesingle ^ quotesingle, quotesingle
 *quoteleft = comma @ none, capHeight ^ comma
 quoteright = quoteleft @ ~none, ~none ^ quoteleft', quoteleft'
 quotedblleft = quoteleft & quoteleft ^ quoteleft, quoteleft
@@ -714,6 +726,3 @@ commaaccent.ascender = commaaccent ^ commaaccent
 
 # don't register defaults until more constructions are in place
 # registerExtensionDefaults({defaultsKey : defaultConstructions})
-
-if __name__ == "__main__":
-    showConstructionForCurrentGlyph()

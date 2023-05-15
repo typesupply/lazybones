@@ -1,3 +1,3 @@
-from main import showConstructionDefaults
+from lazyBones import showConstructionDefaults
 
 showConstructionDefaults()

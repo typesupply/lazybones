@@ -1,3 +1,3 @@
-from main import showConstructionsForCurrentFont
+from lazyBones import showConstructionsForCurrentFont
 
 showConstructionsForCurrentFont()
