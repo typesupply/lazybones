@@ -20,12 +20,16 @@
 			<string>menu_showForCurrentFont.py</string>
 			<key>preferredName</key>
 			<string>Add To Current Font</string>
+			<key>shortKey</key>
+			<string></string>
 		</dict>
 		<dict>
 			<key>path</key>
 			<string>menu_showDefaults.py</string>
 			<key>preferredName</key>
 			<string>Edit Constructions</string>
+			<key>shortKey</key>
+			<string></string>
 		</dict>
 	</array>
 	<key>developer</key>
@@ -45,7 +49,7 @@
 	<key>requiresVersionMinor</key>
 	<string>3</string>
 	<key>timeStamp</key>
-	<real>1684178032.1149709</real>
+	<real>1684180784.9934499</real>
 	<key>version</key>
 	<string>0.3</string>
 </dict>
