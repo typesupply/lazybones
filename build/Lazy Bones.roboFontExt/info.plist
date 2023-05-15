@@ -20,16 +20,12 @@
 			<string>menu_showForCurrentFont.py</string>
 			<key>preferredName</key>
 			<string>Add To Current Font</string>
-			<key>shortKey</key>
-			<string></string>
 		</dict>
 		<dict>
 			<key>path</key>
 			<string>menu_showDefaults.py</string>
 			<key>preferredName</key>
 			<string>Edit Constructions</string>
-			<key>shortKey</key>
-			<string></string>
 		</dict>
 	</array>
 	<key>developer</key>
@@ -39,18 +35,18 @@
 	<key>html</key>
 	<false/>
 	<key>launchAtStartUp</key>
-	<false/>
+	<true/>
 	<key>mainScript</key>
-	<string>main.py</string>
+	<string>launch.py</string>
 	<key>name</key>
 	<string>Lazy Bones</string>
 	<key>requiresVersionMajor</key>
-	<string>3</string>
+	<string>4</string>
 	<key>requiresVersionMinor</key>
-	<string>2</string>
+	<string>3</string>
 	<key>timeStamp</key>
-	<real>1581975487.7936299</real>
+	<real>1684178032.1149709</real>
 	<key>version</key>
-	<string>0.2</string>
+	<string>0.3</string>
 </dict>
 </plist>

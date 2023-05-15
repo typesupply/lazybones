@@ -1,3 +1,3 @@
-from main import showConstructionForCurrentGlyph
+from lazyBones import showConstructionForCurrentGlyph
 
 showConstructionForCurrentGlyph()
