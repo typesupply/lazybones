@@ -13,6 +13,7 @@ showConstructionsForCurrentFont
 showConstructionDefaults
 guessConstructionForGlyphName
 guessConstructionsForGlyphNames
+buildGlyphFromConstruction
 """.strip().splitlines()
 
 
@@ -357,6 +358,9 @@ def buildGlyphFromConstruction(
         clear=True,
         decompose=False
     ):
+    """
+    Build the glyph with the given construction.
+    """
     glyph.prepareUndo("Lazy Bones")
     if clear:
         glyph.clear()
@@ -436,7 +440,9 @@ def deleteSmallestContour(glyph):
     smallest = None
     height = None
     for contour in glyph:
-        h = contour.box[3]
+        if not contour.bounds:
+            continue
+        h = contour.bounds[3]
         if height is None:
             height = h
             smallest = contour
@@ -451,7 +457,9 @@ def deleteBottomContour(glyph):
     lowest = None
     bottom = None
     for contour in glyph:
-        b = contour.box[1]
+        if not contour.bounds:
+            continue
+        b = contour.bounds[1]
         if bottom is None:
             bottom = b
             lowest = contour
@@ -722,6 +730,7 @@ commaaccent.ascender = commaaccent ^ commaaccent
 # ------
 
 *uni2009 = space ^ space * 0.45
+*uni00A0 = space
 """.strip()
 
 # don't register defaults until more constructions are in place

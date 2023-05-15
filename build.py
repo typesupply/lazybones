@@ -48,7 +48,7 @@ modifierMap = {
 }
 
 for menuItem in menuItems:
-    shortKey = menuItem.get("shortKey")
+    shortKey = menuItem.get("shortKey", "")
     if isinstance(shortKey, tuple):
         shortKey = list(shortKey)
         character = shortKey.pop(0)
@@ -60,7 +60,7 @@ for menuItem in menuItems:
             else:
                 converted |= modifier
         shortKey = (converted, character)
-        menuItem["shortKey"] = shortKey
+    menuItem["shortKey"] = shortKey
 
 # Make the various paths.
 
